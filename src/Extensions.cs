@@ -1,33 +1,45 @@
 ﻿using System;
-using System.IdentityModel.Tokens;
-using AspNetCore.JsonWebKeys.Data;
 using AspNetCore.JsonWebKeys.Factories;
 using AspNetCore.JsonWebKeys.IdentityServer4;
 using AspNetCore.JsonWebKeys.Options;
 using AspNetCore.JsonWebKeys.Services;
 using AspNetCore.JsonWebKeys.Stores;
 using IdentityServer4.Stores;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AspNetCore.JsonWebKeys
 {
     public static class Extensions
     {
-        public static JsonWebKeyManagementBuilder AddJsonWebKeyManagement(this IServiceCollection services, JsonWebKeyType jsonWebKeyType, Func<IServiceProvider, JsonWebKeyPairManagerOptions> optionsAction)
+        public static JsonWebKeyManagementBuilder AddJsonWebKeyManagement<T>(this IServiceCollection services, Action<IServiceProvider, JsonWebKeyPairManagerOptions> optionsAction = null) where T : class, IJsonWebKeyPairFactory
         {
-            services.AddSingleton(optionsAction);
-
-            switch (jsonWebKeyType)
+            services.AddSingleton(provider =>
             {
-                case JsonWebKeyType.Rsa:
-                    services.AddSingleton<IJsonWebKeyPairFactory, RsaJsonWebKeyPairFactory>();
-                    services.AddSingleton<JsonWebKeyPairManagerService>();
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(jsonWebKeyType), jsonWebKeyType, null);
-            }
+                var options = new JsonWebKeyPairManagerOptions();
+
+                optionsAction?.Invoke(services.BuildServiceProvider(), options);
+
+                return options;
+            });
+
+            services.AddControllers().AddApplicationPart(typeof(KeyController).Assembly).AddControllersAsServices();
+            services.AddSingleton<IJsonWebKeyPairFactory, T>();
+            services.AddSingleton<JsonWebKeyPairManagerService>();
+            services.AddHostedService<JsonWebKeyPairRotationService>();
+            services.AddSingleton<ISigningCredentialStore, SigningCredentialStore>();
+            services.AddSingleton<IValidationKeysStore, ValidationKeysStore>();
 
             return new JsonWebKeyManagementBuilder(services);
+        }
+
+        public static void RegisterJsonWebKeyRoutes(this IEndpointRouteBuilder builder)
+        {
+            builder.MapControllerRoute("jsonWebKey", "/.well-known/openid-configuration/jwks", new {controller = "Key", action = "GetAll"});
+            builder.MapControllerRoute("jsonWebKeyLast", "/.well-known/openid-configuration/jwks/last", new { controller = "Key", action = "GetLast" });
+            builder.MapControllerRoute("jsonWebKeyCurrent", "/.well-known/openid-configuration/jwks/current", new { controller = "Key", action = "GetCurrent" });
+            builder.MapControllerRoute("jsonWebKeyNext", "/.well-known/openid-configuration/jwks/next", new { controller = "Key", action = "GetNext" });
         }
 
         public class JsonWebKeyManagementBuilder
@@ -39,26 +51,19 @@ namespace AspNetCore.JsonWebKeys
                 _serviceCollection = serviceCollection;
             }
 
-            public JsonWebKeyManagementBuilder AddIdentityServerSupport()
-            {
-                _serviceCollection.AddSingleton<ISigningCredentialStore, SigningCredentialStore>();
-                _serviceCollection.AddSingleton<IValidationKeysStore, ValidationKeysStore>();
-
-                return this;
-            }
-
-            public JsonWebKeyManagementBuilder AddStore<T>() where T : class, IJsonWebKeyPairStore
-            {
-                _serviceCollection.AddSingleton<IJsonWebKeyPairStore, T>();
-
-                return this;
-            }
-
             public JsonWebKeyManagementBuilder AddFileStore(
-                Func<IServiceProvider, FileJsonWebKeyPairStoreOptions> optionsAction)
+                Action<IServiceProvider, FileJsonWebKeyPairStoreOptions> optionsAction = null)
             {
-                _serviceCollection.AddSingleton(optionsAction);
-                AddStore<FileJsonWebKeyPairStore>();
+                _serviceCollection.AddSingleton(provider =>
+                {
+                    var options = new FileJsonWebKeyPairStoreOptions();
+
+                    optionsAction?.Invoke(provider, options);
+
+                    return options;
+                });
+
+                _serviceCollection.AddSingleton<IJsonWebKeyPairStore, FileJsonWebKeyPairStore>();
 
                 return this;
             }

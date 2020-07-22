@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
-using System.Text;
 using IdentityServer4.Models;
 using Microsoft.IdentityModel.Tokens;
 using JsonWebKey = Microsoft.IdentityModel.Tokens.JsonWebKey;
@@ -18,9 +17,9 @@ namespace AspNetCore.JsonWebKeys.Data
 
         private readonly string _privateKeyXml;
 
-        private RsaJsonWebKeyPair(string privateKeyXml)
+        private RsaJsonWebKeyPair(string privateKeyXml, DateTime? createdTime = null)
         {
-            CreatedTime = DateTime.Now;
+            CreatedTime = createdTime ?? DateTime.Now;
 
             _privateKeyXml = privateKeyXml;
 
@@ -35,7 +34,7 @@ namespace AspNetCore.JsonWebKeys.Data
             PrivateKey = JsonWebKeyConverter.ConvertFromRSASecurityKey(privateRsaSecurityKey);
             PublicKey = JsonWebKeyConverter.ConvertFromRSASecurityKey(new RsaSecurityKey(rsaPublicKey));
 
-            SigningCredentials = new SigningCredentials(privateRsaSecurityKey, PrivateKey.Alg);
+            SigningCredentials = new SigningCredentials(privateRsaSecurityKey, SecurityAlgorithms.RsaSha256Signature);
             SecurityKeyInfo = new SecurityKeyInfo
             {
                 Key = privateRsaSecurityKey,
@@ -51,14 +50,23 @@ namespace AspNetCore.JsonWebKeys.Data
             return new RsaJsonWebKeyPair(rsaPrivateKey.ToXmlString(true));
         }
 
-        internal static RsaJsonWebKeyPair Deserialize(string data)
+        internal static RsaJsonWebKeyPair Deserialize(Dictionary<string, string> data)
         {
-            return new RsaJsonWebKeyPair(data);
+            if (data.ContainsKey("CreatedTime"))
+            {
+                return new RsaJsonWebKeyPair(data["KeyData"], DateTime.Parse(data["CreatedTime"]));
+            }
+
+            return new RsaJsonWebKeyPair(data["KeyData"]);
         }
 
-        internal static string Serialize(RsaJsonWebKeyPair keyPair)
+        internal static Dictionary<string, string> Serialize(RsaJsonWebKeyPair keyPair)
         {
-            return keyPair._privateKeyXml;
+            return new Dictionary<string, string>
+            {
+                {"KeyData", keyPair._privateKeyXml},
+                {"CreatedTime", keyPair.CreatedTime.ToString()}
+            };
         }
     }
 }

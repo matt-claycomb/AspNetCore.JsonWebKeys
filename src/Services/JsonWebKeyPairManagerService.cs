@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 using AspNetCore.JsonWebKeys.Data;
 using AspNetCore.JsonWebKeys.Factories;
 using AspNetCore.JsonWebKeys.Options;
 using AspNetCore.JsonWebKeys.Stores;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace AspNetCore.JsonWebKeys.Services
@@ -13,48 +14,85 @@ namespace AspNetCore.JsonWebKeys.Services
     {
         private readonly IJsonWebKeyPairFactory _jsonWebKeyPairFactory;
         private readonly IJsonWebKeyPairStore _jsonWebKeyPairStore;
+        private Dictionary<string, IJsonWebKeyPair> _keyPairs;
         private readonly JsonWebKeyPairManagerOptions _options;
         private readonly ILogger _logger;
-        public JsonWebKeyPairManagerService(IJsonWebKeyPairFactory jsonWebKeyPairFactory, IJsonWebKeyPairStore jsonWebKeyPairStore, ILogger logger, JsonWebKeyPairManagerOptions options)
+
+        public JsonWebKeyPairManagerService(IJsonWebKeyPairFactory jsonWebKeyPairFactory, IJsonWebKeyPairStore jsonWebKeyPairStore, IServiceProvider serviceProvider)
         {
             _jsonWebKeyPairFactory = jsonWebKeyPairFactory;
             _jsonWebKeyPairStore = jsonWebKeyPairStore;
-            _logger = logger;
-            _options = options;
+            _options = serviceProvider.GetService<JsonWebKeyPairManagerOptions>();
+            _logger = serviceProvider.GetService<ILogger<JsonWebKeyPairManagerService>>();
 
-            if (!_jsonWebKeyPairStore.Exists("current"))
+            ReloadFromStore();
+
+            if (!_keyPairs.ContainsKey("current"))
             {
-                _jsonWebKeyPairStore.Add("current", jsonWebKeyPairFactory.Create(_options.KeyLifetimeDays));
+                _logger?.LogDebug("Generating non-existent \"current\" key.");
+                _keyPairs.Add("current", jsonWebKeyPairFactory.Create());
             }
 
-            if (!_jsonWebKeyPairStore.Exists("next"))
+            if (!_keyPairs.ContainsKey("next"))
             {
-                _jsonWebKeyPairStore.Add("next", jsonWebKeyPairFactory.Create(_options.KeyLifetimeDays));
+                _logger?.LogDebug("Generating non-existent \"next\" key.");
+                _keyPairs.Add("next", jsonWebKeyPairFactory.Create());
             }
+
+            SaveToStore();
+        }
+
+        public void ReloadFromStore()
+        {
+            _keyPairs = _jsonWebKeyPairStore.Load().ToDictionary(d => d.Key, d => _jsonWebKeyPairFactory.Deserialize(d.Value));
+        }
+
+        private void SaveToStore()
+        {
+            var stringData = _keyPairs.ToDictionary(d => d.Key, d => _jsonWebKeyPairFactory.Serialize(d.Value));
+            _jsonWebKeyPairStore.Save(stringData);
         }
 
         public IJsonWebKeyPair GetLastKey()
         {
-            return _jsonWebKeyPairStore.Exists("last") ? _jsonWebKeyPairStore.Get("last") : null;
+            return _keyPairs.ContainsKey("last") ? _keyPairs["last"] : null;
         }
 
         public IJsonWebKeyPair GetCurrentKey()
         {
-            return _jsonWebKeyPairStore.Get("current");
+            return _keyPairs["current"];
         }
 
         public IJsonWebKeyPair GetNextKey()
         {
-            return _jsonWebKeyPairStore.Get("next");
+            return _keyPairs["current"];
         }
 
-        private void RotateKeys()
+        internal void RotateKeys()
         {
-            var newLastKey = _jsonWebKeyPairStore.Exists("current") ? _jsonWebKeyPairStore.Get("current") : null;
-            var newCurrentKey = _jsonWebKeyPairStore.Exists("next")
-                ? _jsonWebKeyPairStore.Get("next")
-                : _jsonWebKeyPairFactory.Create(_options.KeyLifetimeDays);
-            var newNextKey = _jsonWebKeyPairFactory.Create(_options.KeyLifetimeDays);
+            ReloadFromStore();
+            
+            if (_keyPairs["current"].CreatedTime.AddDays(_options.KeyLifetimeDays) < DateTime.Now)
+            {
+                _logger?.LogDebug("Rotating keys.");
+
+                var newKeys = new Dictionary<string, IJsonWebKeyPair>
+                {
+                    {"last", _keyPairs["current"]},
+                    {"current", _keyPairs["next"]},
+                    {"next", _jsonWebKeyPairFactory.Create()}
+                };
+
+                _keyPairs = newKeys;
+
+                SaveToStore();
+
+                _logger.LogDebug("Done rotating keys.");
+            }
+            else
+            {
+                _logger?.LogDebug("Keys have recently been rotated. Skipping rotate.");
+            }
         }
     }
 }

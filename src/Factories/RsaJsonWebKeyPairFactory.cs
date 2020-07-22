@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 using AspNetCore.JsonWebKeys.Data;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
 
 namespace AspNetCore.JsonWebKeys.Factories
 {
@@ -14,12 +10,12 @@ namespace AspNetCore.JsonWebKeys.Factories
             return RsaJsonWebKeyPair.Create();
         }
 
-        public IJsonWebKeyPair Deserialize(string data)
+        public IJsonWebKeyPair Deserialize(Dictionary<string, string> data)
         {
             return RsaJsonWebKeyPair.Deserialize(data);
         }
 
-        public string Serialize(IJsonWebKeyPair keyPair)
+        public Dictionary<string, string> Serialize(IJsonWebKeyPair keyPair)
         {
             return RsaJsonWebKeyPair.Serialize(keyPair as RsaJsonWebKeyPair);
         }

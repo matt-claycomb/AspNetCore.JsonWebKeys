@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using AspNetCore.JsonWebKeys.Services;
 using IdentityServer4.Stores;
 using Microsoft.IdentityModel.Tokens;
@@ -19,7 +16,6 @@ namespace AspNetCore.JsonWebKeys.IdentityServer4
 
         public Task<SigningCredentials> GetSigningCredentialsAsync()
         {
-            //TODO Refactor for proper async
             return Task.FromResult(_keyPairManagerService.GetCurrentKey().SigningCredentials);
         }
     }

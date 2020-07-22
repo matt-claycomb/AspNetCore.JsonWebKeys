@@ -1,17 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Text;
-using AspNetCore.JsonWebKeys.Data;
+﻿using System.Collections.Generic;
 
 namespace AspNetCore.JsonWebKeys.Stores
 {
     public interface IJsonWebKeyPairStore
     {
-        ImmutableDictionary<string, IJsonWebKeyPair> GetAll();
-        IJsonWebKeyPair Get(string name);
-        bool Exists(string name);
-        void Delete(string name);
-        void Add(string name, IJsonWebKeyPair keyPair);
+        Dictionary<string, Dictionary<string, string>> Load();
+        void Save(Dictionary<string, Dictionary<string, string>> data);
     }
 }

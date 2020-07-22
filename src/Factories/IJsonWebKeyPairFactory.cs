@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Text;
+﻿using System.Collections.Generic;
 using AspNetCore.JsonWebKeys.Data;
-using Microsoft.IdentityModel.Tokens;
 
 namespace AspNetCore.JsonWebKeys.Factories
 {
     public interface IJsonWebKeyPairFactory
     {
         IJsonWebKeyPair Create();
-        IJsonWebKeyPair Deserialize(string data);
-        string Serialize(IJsonWebKeyPair keyPair);
+        IJsonWebKeyPair Deserialize(Dictionary<string, string> data);
+        Dictionary<string, string> Serialize(IJsonWebKeyPair keyPair);
     }
 }
