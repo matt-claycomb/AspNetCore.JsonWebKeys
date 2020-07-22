@@ -2,13 +2,25 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Authors>Matt Claycomb</Authors>
+    <Company />
+    <Product />
+    <Copyright>Copyright (C) 2020 Matt Claycomb &lt;matt@claycombfamily.us&gt;</Copyright>
+    <PackageLicenseExpression>OSL-3.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/matt-claycomb/EntityFrameworkCore.DbContextPoolMultiplexer</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/matt-claycomb/EntityFrameworkCore.DbContextPoolMultiplexer</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <Nullable>annotations</Nullable>
+    <Version>1.0.1</Version>
   </PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="IdentityServer4" Version="4.0.2" />
-		<PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.7.1" />
-		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.7.1" />
-		<FrameworkReference Include="Microsoft.AspNetCore.App" />
-	</ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="IdentityServer4" Version="4.0.2" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.7.1" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.7.1" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
 
 </Project>
