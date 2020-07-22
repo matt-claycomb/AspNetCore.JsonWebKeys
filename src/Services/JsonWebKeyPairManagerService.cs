@@ -71,6 +71,12 @@ namespace AspNetCore.JsonWebKeys.Services
         internal void RotateKeys()
         {
             ReloadFromStore();
+
+            if (_options.DisableKeyRotation)
+            {
+                _logger?.LogDebug("Key rotation disabled. Just reloading from store.");
+                return;
+            }
             
             if (_keyPairs["current"].CreatedTime.AddDays(_options.KeyLifetimeDays) < DateTime.Now)
             {
