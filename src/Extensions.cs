@@ -19,7 +19,7 @@ namespace AspNetCore.JsonWebKeys
             {
                 var options = new JsonWebKeyPairManagerOptions();
 
-                optionsAction?.Invoke(services.BuildServiceProvider(), options);
+                optionsAction?.Invoke(provider, options);
 
                 return options;
             });
