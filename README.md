@@ -2,6 +2,9 @@
 
 This library contains services designed to help generate, store and manage JSON Web Keys, such as those used for OAuth2 client assertions.
 
+#!!! Do not use right now! There is an error in the application logic meaning the key IDs in the jwks endpoint change, which they should not, per the OAuth2 specification. This could cause major issues depending on implementation.
+
+
 ## Limitations
 
 This may or may not be usable as-is in production due to the following limitations:
